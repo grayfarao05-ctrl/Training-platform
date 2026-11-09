@@ -1,0 +1,456 @@
+{
+  "entities": {
+    "Objective": {
+      "title": "Objective",
+      "description": "A CompTIA A+ exam objective with content, components, and questions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "domain": { "type": "string" },
+        "description": { "type": "string" },
+        "exam": { "type": "string", "enum": ["Core 1", "Core 2"] },
+        "thumbnail": { "type": "string" },
+        "content": { "type": "string" },
+        "components": { "type": "array", "items": { "$ref": "PhysicalComponent" } },
+        "questions": { "type": "array", "items": { "$ref": "PracticeQuestion" } },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "domain", "description", "exam"]
+    },
+    "PhysicalComponent": {
+      "title": "Physical Component",
+      "description": "A hardware component related to an objective.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "visualTags": { "type": "string" }
+      },
+      "required": ["name", "description"]
+    },
+    "PracticeQuestion": {
+      "title": "Practice Question",
+      "description": "A practice exam question.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "correctAnswer": { "type": "integer" },
+        "explanation": { "type": "string" },
+        "objectiveId": { "type": "string" }
+      },
+      "required": ["id", "question", "options", "correctAnswer", "explanation", "objectiveId"]
+    },
+    "TestQuestion": {
+      "title": "Test Question",
+      "description": "A test question for the Test Center.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "correctAnswer": { "type": "integer" },
+        "explanation": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard"] },
+        "category": { "type": "string", "enum": ["Hardware", "Networking", "Security"] }
+      },
+      "required": ["id", "text", "options", "correctAnswer", "explanation", "difficulty", "category"]
+    },
+    "UserStats": {
+      "title": "User Stats",
+      "description": "User performance, XP, and progress data.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "xp": { "type": "integer" },
+        "level": { "type": "integer" },
+        "streak": { "type": "integer" },
+        "completedObjectives": { "type": "array", "items": { "type": "string" } },
+        "lastStudyDate": { "type": "string", "format": "date-time" },
+        "examReadiness": { "type": "integer" },
+        "mockExamScores": { "type": "array", "items": { "type": "integer" } },
+        "badges": { "type": "array", "items": { "type": "string" } },
+        "activityHistory": { "type": "array", "items": { "$ref": "ActivityDay" } },
+        "role": { "type": "string", "enum": ["student", "admin"] }
+      },
+      "required": ["uid", "email", "displayName", "xp", "level", "role"]
+    },
+    "ActivityDay": {
+      "title": "Activity Day",
+      "description": "XP earned on a specific day.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "count": { "type": "integer" }
+      },
+      "required": ["date", "count"]
+    },
+    "TestResult": {
+      "title": "Test Result",
+      "description": "A record of a completed practice test or exam.",
+      "type": "object",
+      "properties": {
+        "objectiveId": { "type": "string" },
+        "score": { "type": "integer" },
+        "totalQuestions": { "type": "integer" },
+        "percentage": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "objectiveTitle": { "type": "string" }
+      },
+      "required": ["score", "totalQuestions", "percentage", "timestamp"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "A user-created note.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "objectiveId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "createdAt"]
+    },
+    "Folder": {
+      "title": "Folder",
+      "description": "A folder for organizing files.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "File": {
+      "title": "File",
+      "description": "A file uploaded by the user.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string" },
+        "size": { "type": "integer" },
+        "folderId": { "type": "string" },
+        "storagePath": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "url", "type", "size", "createdAt"]
+    },
+    "Todo": {
+      "title": "Todo",
+      "description": "A task in the user's todo list.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "completed", "createdAt"]
+    },
+    "BossResponse": {
+      "title": "Boss Response",
+      "description": "A user's response to a boss challenge.",
+      "type": "object",
+      "properties": {
+        "challengeId": { "type": "string" },
+        "userId": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "graded"] },
+        "grade": { "type": "integer" },
+        "feedback": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["challengeId", "userId", "content", "status", "submittedAt"]
+    },
+    "ExternalLink": {
+      "title": "External Link",
+      "description": "A link to an external resource provided by admins.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "url": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["label", "url", "createdAt"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Certification course in ITreal catalog.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "shortLabel": { "type": "string" },
+        "description": { "type": "string" },
+        "accentColor": { "type": "string" },
+        "domains": { "type": "array" },
+        "requiresCode": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["draft", "published", "archived"] },
+        "order": { "type": "integer" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "name", "shortLabel", "description", "accentColor", "domains", "requiresCode", "status", "order", "createdAt", "createdBy"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Student progress or employer summary report record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["progress", "employer"] },
+        "studentUid": { "type": "string" },
+        "courseId": { "type": "string" },
+        "periodStart": { "type": "string" },
+        "periodEnd": { "type": "string" },
+        "issuedAt": { "type": "string" },
+        "issuedBy": { "type": "string" },
+        "tutorComment": { "type": "string" },
+        "consent": { "type": "object" },
+        "snapshot": { "type": "object" }
+      },
+      "required": ["id", "type", "studentUid", "courseId", "periodStart", "periodEnd", "issuedAt", "issuedBy", "consent", "snapshot"]
+    },
+    "ReportVerification": {
+      "title": "ReportVerification",
+      "description": "Public verification record for student reports.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["progress", "employer"] },
+        "studentDisplayName": { "type": "string" },
+        "courseName": { "type": "string" },
+        "periodStart": { "type": "string" },
+        "periodEnd": { "type": "string" },
+        "issuedAt": { "type": "string" },
+        "testAverage": { "type": "integer" },
+        "objectivesCompleted": { "type": "integer" },
+        "objectivesTotal": { "type": "integer" },
+        "status": { "type": "string", "enum": ["valid", "revoked"] }
+      },
+      "required": ["id", "type", "studentDisplayName", "courseName", "periodStart", "periodEnd", "issuedAt", "status"]
+    },
+    "CVClinicCase": {
+      "title": "CV Clinic Case",
+      "description": "A sample CV with planted mistakes for the CV Clinic arcade game.",
+      "type": "object",
+      "properties": {
+        "course": { "type": "string" },
+        "title": { "type": "string", "maxLength": 80 },
+        "brief": { "type": "string", "maxLength": 200 },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+        "timeLimitSeconds": { "type": "integer" },
+        "sections": { "type": "array" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["course", "title", "brief", "difficulty", "timeLimitSeconds", "sections", "status", "createdAt", "createdBy"]
+    },
+    "ContractCase": {
+      "title": "Contract Case",
+      "description": "A sample employment agreement with red flag clauses and missing terms for the Contract Red Flags game.",
+      "type": "object",
+      "properties": {
+        "course": { "type": "string" },
+        "title": { "type": "string", "maxLength": 80 },
+        "brief": { "type": "string", "maxLength": 200 },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+        "timeLimitSeconds": { "type": "integer" },
+        "clauses": { "type": "array" },
+        "missingItems": { "type": "array" },
+        "correctVerdict": { "type": "string", "enum": ["sign", "ask-first", "dont-sign"] },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["course", "title", "brief", "difficulty", "timeLimitSeconds", "clauses", "missingItems", "correctVerdict", "status", "createdAt", "createdBy"]
+    },
+    "ReferenceFigures": {
+      "title": "Reference Figures",
+      "description": "Labour reference figures (minimum wage, UIF) used for placeholders and case validations.",
+      "type": "object",
+      "properties": {
+        "minimumWageHourly": { "type": "number" },
+        "minimumWageFrom": { "type": "string" },
+        "uifRatePercent": { "type": "number" },
+        "checkedOn": { "type": "string" },
+        "source": { "type": "string" }
+      },
+      "required": ["minimumWageHourly", "minimumWageFrom", "uifRatePercent", "checkedOn", "source"]
+    },
+    "Review": {
+      "title": "Student Review",
+      "description": "Student testimonial displayed on the public landing page.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "school": { "type": "string" },
+        "course": { "type": "string" },
+        "quote": { "type": "string" },
+        "rating": { "type": "integer" },
+        "avatar": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "school", "course", "quote", "rating"]
+    },
+    "TopStudent": {
+      "title": "Top Student",
+      "description": "POPIA-compliant top performing student profile on public landing page.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "surnameInitial": { "type": "string" },
+        "schoolOrArea": { "type": "string" },
+        "track": { "type": "string" },
+        "score": { "type": "integer" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "rank": { "type": "integer" },
+        "consentGiven": { "type": "boolean" },
+        "cvUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "firstName", "surnameInitial", "schoolOrArea", "track", "score", "tags", "rank", "consentGiven"]
+    },
+    "InterviewInvite": {
+      "title": "Interview Invite",
+      "description": "Interview invite request submitted by employers for Top 5 candidates.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "companyName": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "emailOrPhone": { "type": "string" },
+        "role": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "contacted", "scheduled", "archived"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["studentId", "companyName", "contactPerson", "emailOrPhone"]
+    },
+    "ContactMessage": {
+      "title": "Contact Message",
+      "description": "Public website inquiry message submitted via contact form.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["unread", "replied", "archived"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email", "message"]
+    },
+    "LandingSettings": {
+      "title": "Landing Settings",
+      "description": "Global settings for landing page story and impact counter stats.",
+      "type": "object",
+      "properties": {
+        "aboutStory": { "type": "string" },
+        "stats": { "type": "object" },
+        "updatedAt": { "type": "string" }
+      }
+    }
+  },
+
+  "firestore": {
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Admin-only generated student reports records."
+    },
+    "/report_verifications/{reportId}": {
+      "schema": "ReportVerification",
+      "description": "Public verification documents for reports."
+    },
+    "/courses/{courseId}": {
+      "schema": "Course",
+      "description": "Certification course definitions."
+    },
+    "/objectives/{objectiveId}": {
+      "schema": "Objective",
+      "description": "Collection of exam objectives."
+    },
+    "/users/{userId}": {
+      "schema": "UserStats",
+      "description": "User profiles and performance data."
+    },
+    "/users/{userId}/testResults/{resultId}": {
+      "schema": "TestResult",
+      "description": "History of practice tests completed by the user."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": "Note",
+      "description": "User's personal study notes."
+    },
+    "/users/{userId}/folders/{folderId}": {
+      "schema": "Folder",
+      "description": "User's file folders."
+    },
+    "/users/{userId}/files/{fileId}": {
+      "schema": "File",
+      "description": "User's uploaded study materials."
+    },
+    "/users/{userId}/todo/{todoId}": {
+      "schema": "Todo",
+      "description": "User's study task list."
+    },
+    "/bossResponses/{responseId}": {
+      "schema": "BossResponse",
+      "description": "Submissions for boss challenges."
+    },
+    "/test_questions/{questionId}": {
+      "schema": "TestQuestion",
+      "description": "Global test questions for the Test Center."
+    },
+    "/external_links/{linkId}": {
+      "schema": "ExternalLink",
+      "description": "Global external resources provided by administrators."
+    },
+    "/cv_clinic_cases/{caseId}": {
+      "schema": "CVClinicCase",
+      "description": "Interactive sample CV cases with planted mistakes for the CV Clinic arcade game."
+    },
+    "/contract_cases/{caseId}": {
+      "schema": "ContractCase",
+      "description": "Interactive sample employment contracts with red flag clauses and missing mandatory terms for the Contract Red Flags arcade game."
+    },
+    "/reference_figures/main": {
+      "schema": "ReferenceFigures",
+      "description": "Official labour statutory figures (minimum wage, UIF rate, source)."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Student testimonials displayed on the public landing page."
+    },
+    "/topStudents/{studentId}": {
+      "schema": "TopStudent",
+      "description": "POPIA-compliant top students displayed on the public landing page."
+    },
+    "/interviewInvites/{inviteId}": {
+      "schema": "InterviewInvite",
+      "description": "Employer interview invites for top students."
+    },
+    "/contactMessages/{messageId}": {
+      "schema": "ContactMessage",
+      "description": "Visitor contact inquiries from landing page."
+    },
+    "/landingSettings/{settingId}": {
+      "schema": "LandingSettings",
+      "description": "Landing page configuration and impact stats."
+    }
+  }
+}
+

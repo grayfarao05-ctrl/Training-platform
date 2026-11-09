@@ -1,0 +1,502 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Role == 'admin' ONLY. No hardcoded emails, no client-set isAdmin flag bypass.
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isCourseUnlockedForUser(course) {
+      return course == 'a-plus' ||
+        (
+          exists(/databases/$(database)/documents/courses/$(course)) &&
+          get(/databases/$(database)/documents/courses/$(course)).data.requiresCode == false
+        ) ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          'unlockedCourses' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+          course in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.unlockedCourses
+        );
+    }
+
+    // Atomic Batch Code Redemption Validator:
+    // A student can only alter unlockedCourses if a valid unlock code was marked used by the student in the same batch.
+    function isCodeRedemptionValid(userId) {
+      let incomingUser = request.resource.data;
+      let currentUser = resource.data;
+      let currentCourses = currentUser.get('unlockedCourses', []);
+      let newCourses = incomingUser.get('unlockedCourses', []);
+
+      return (currentCourses == newCourses) ||
+        (
+          'redeemedCode' in incomingUser &&
+          incomingUser.redeemedCode is string &&
+          incomingUser.redeemedCode.size() > 0 &&
+          existsAfter(/databases/$(database)/documents/unlock_codes/$(incomingUser.redeemedCode)) &&
+          getAfter(/databases/$(database)/documents/unlock_codes/$(incomingUser.redeemedCode)).data.usedBy == request.auth.uid
+        );
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'displayName', 'xp', 'level', 'role']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.xp is number && data.xp >= 0 &&
+             data.level is number && data.level >= 0 &&
+             data.role in ['student', 'admin'] &&
+             (!('status' in data) || data.status in ['active', 'suspended']);
+    }
+
+    function isValidObjective(data) {
+      return hasRequiredFields(['id', 'title', 'domain', 'description']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.domain is string && data.domain.size() > 0 && data.domain.size() <= 60 &&
+             (!('course' in data) || (data.course is string && data.course.size() > 0)) &&
+             (!('exam' in data) || data.exam == null || (data.get('course', 'a-plus') == 'a-plus' ? data.exam in ['Core 1', 'Core 2'] : true));
+    }
+
+    function isValidQuestion(data) {
+      return (!('type' in data) || data.type in ['choice', 'image', 'multi', 'fill', 'match', 'order', 'terminal']) &&
+             (!('question' in data) || (data.question is string && data.question.size() <= 500)) &&
+             (!('text' in data) || (data.text is string && data.text.size() <= 500)) &&
+             (!('explanation' in data) || (data.explanation is string && data.explanation.size() <= 300)) &&
+             (!('imageAlt' in data) || (data.imageAlt is string && data.imageAlt.size() <= 300)) &&
+             (!('prompt' in data) || (data.prompt is string && data.prompt.size() <= 300)) &&
+             (!('simulatedOutput' in data) || (data.simulatedOutput is string && data.simulatedOutput.size() <= 300)) &&
+             (!('hint' in data) || (data.hint is string && data.hint.size() <= 300)) &&
+             (!('options' in data) || (data.options is list && data.options.size() <= 12)) &&
+             (!('correctAnswers' in data) || (data.correctAnswers is list && data.correctAnswers.size() <= 12)) &&
+             (!('acceptedAnswers' in data) || (data.acceptedAnswers is list && data.acceptedAnswers.size() <= 12)) &&
+             (!('pairs' in data) || (data.pairs is list && data.pairs.size() <= 12)) &&
+             (!('steps' in data) || (data.steps is list && data.steps.size() <= 12)) &&
+             (!('acceptedCommands' in data) || (data.acceptedCommands is list && data.acceptedCommands.size() <= 12)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.matches('^https://.*'))) &&
+             (!('domain' in data) || (data.domain is string && data.domain.size() > 0 && data.domain.size() <= 60)) &&
+             (!('course' in data) || (data.course is string && data.course.size() > 0)) &&
+             (!('aiDrafted' in data) || data.aiDrafted is bool) &&
+             (!('imageIdea' in data) || (data.imageIdea is string && data.imageIdea.size() <= 500)) &&
+             (!('exam' in data) || data.exam == null || (data.get('course', 'a-plus') == 'a-plus' ? data.exam in ['Core 1', 'Core 2'] : true));
+    }
+
+    function isValidTestResult(data) {
+      return hasRequiredFields(['score', 'totalQuestions', 'percentage', 'timestamp']) &&
+             data.score is number && data.score >= 0 &&
+             data.totalQuestions is number && data.totalQuestions > 0 &&
+             data.percentage is number && data.percentage >= 0 && data.percentage <= 100 &&
+             (!('answers' in data) || data.answers is map);
+    }
+
+    function isValidBossResponse(data) {
+      return hasRequiredFields(['uid', 'email', 'answer', 'submittedAt', 'challengeId', 'challengeTitle', 'status']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.challengeId is string &&
+             data.challengeTitle is string &&
+             data.answer is string &&
+             data.status in ['pending', 'graded'];
+    }
+
+    function isValidExternalLink(data) {
+      return hasRequiredFields(['label', 'url', 'createdAt']) &&
+             data.label is string && data.label.size() > 0 && data.label.size() < 200 &&
+             data.url is string && data.url.size() > 0 && data.url.size() < 1000 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidCourse(data) {
+      return hasRequiredFields(['id', 'name', 'shortLabel', 'description', 'accentColor', 'domains', 'requiresCode', 'status', 'order', 'createdAt', 'createdBy']) &&
+             hasOnlyAllowedFields(['id', 'name', 'shortLabel', 'description', 'accentColor', 'domains', 'requiresCode', 'status', 'order', 'createdAt', 'createdBy']) &&
+             data.id is string && data.id.matches("^[a-z0-9-]{3,30}$") &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 60 &&
+             data.shortLabel is string && data.shortLabel.size() >= 1 && data.shortLabel.size() <= 20 &&
+             data.description is string && data.description.size() <= 500 &&
+             data.accentColor is string && data.accentColor.matches("^#[0-9A-Fa-f]{6}$") &&
+             data.status in ['draft', 'published', 'archived'] &&
+             data.requiresCode is bool &&
+             data.domains is list && data.domains.size() <= 12 &&
+             data.order is number &&
+             data.createdBy is string;
+    }
+
+    function isValidAnnouncement(data) {
+      return hasRequiredFields(['title', 'body', 'audience', 'pinned']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.body is string && data.body.size() > 0 && data.body.size() <= 600 &&
+             data.audience is string && data.audience.size() > 0 &&
+             data.pinned is bool &&
+             (!('expiresAt' in data) || data.expiresAt == null || data.expiresAt is string || data.expiresAt is timestamp);
+    }
+
+    function isValidVacancy(data) {
+      return hasRequiredFields(['title', 'company', 'location', 'type', 'closingDate', 'status']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.company is string && data.company.size() > 0 && data.company.size() <= 200 &&
+             data.location is string && data.location.size() > 0 && data.location.size() <= 200 &&
+             data.type in ['learnership', 'internship', 'junior-role', 'contract', 'other'] &&
+             data.status in ['open', 'closed'] &&
+             (!('applyUrl' in data) || data.applyUrl == null || data.applyUrl == '' || (data.applyUrl is string && data.applyUrl.matches("^https://.*"))) &&
+             (!('applyInfo' in data) || data.applyInfo == null || (data.applyInfo is string && data.applyInfo.size() <= 200));
+    }
+
+    function isValidNewsItem(data) {
+      return hasRequiredFields(['title', 'sourceName', 'url', 'publishedAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 250 &&
+             data.sourceName is string && data.sourceName.size() > 0 && data.sourceName.size() <= 100 &&
+             data.url is string && data.url.matches("^https://.*") &&
+             (!('note' in data) || data.note == null || (data.note is string && data.note.size() <= 200));
+    }
+
+    function isValidCVClinicCase(data) {
+      return hasRequiredFields(['course', 'title', 'brief', 'difficulty', 'timeLimitSeconds', 'sections', 'status', 'createdAt', 'createdBy']) &&
+             data.course is string && data.course.size() > 0 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 80 &&
+             data.brief is string && data.brief.size() <= 200 &&
+             data.difficulty in ['easy', 'medium', 'hard'] &&
+             data.timeLimitSeconds is number && data.timeLimitSeconds >= 30 && data.timeLimitSeconds <= 180 &&
+             data.status in ['draft', 'published'] &&
+             data.createdBy is string &&
+             data.sections is list && data.sections.size() > 0 && data.sections.size() <= 12;
+    }
+
+    function isValidContractCase(data) {
+      return hasRequiredFields(['course', 'title', 'brief', 'difficulty', 'timeLimitSeconds', 'clauses', 'missingItems', 'correctVerdict', 'status', 'createdAt', 'createdBy']) &&
+             data.course is string && data.course.size() > 0 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 80 &&
+             data.brief is string && data.brief.size() <= 200 &&
+             data.difficulty in ['easy', 'medium', 'hard'] &&
+             data.timeLimitSeconds is number && data.timeLimitSeconds >= 45 && data.timeLimitSeconds <= 240 &&
+             data.status in ['draft', 'published'] &&
+             data.correctVerdict in ['sign', 'ask-first', 'dont-sign'] &&
+             data.createdBy is string &&
+             data.clauses is list && data.clauses.size() >= 8 && data.clauses.size() <= 25 &&
+             data.missingItems is list && data.missingItems.size() <= 5;
+    }
+
+    function isValidReferenceFigures(data) {
+      return hasRequiredFields(['minimumWageHourly', 'minimumWageFrom', 'uifRatePercent', 'checkedOn', 'source']) &&
+             data.minimumWageHourly is number && data.minimumWageHourly >= 0 &&
+             data.minimumWageFrom is string && data.minimumWageFrom.size() <= 100 &&
+             data.uifRatePercent is number && data.uifRatePercent >= 0 && data.uifRatePercent <= 100 &&
+             data.checkedOn is string && data.checkedOn.size() <= 100 &&
+             data.source is string && data.source.size() <= 200;
+    }
+
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Connection test health check
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Courses: Publicly readable so course list and info loads smoothly; only admins can create, update, delete
+    match /courses/{courseId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidCourse(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Objectives: Publicly readable so curriculum content loads reliably for all students and visitors, writable only by admins
+    match /objectives/{objectiveId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidObjective(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Questions: Publicly readable by authenticated users, writable only by admins
+    match /questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidQuestion(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Test Questions: Publicly readable by authenticated users, writable only by admins
+    match /test_questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidQuestion(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Users:
+    // - Role is locked for students (cannot set role == 'admin' or isAdmin: true)
+    // - unlockedCourses can only be modified via an atomic batch with a matching unlock_code
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      
+      allow create: if isOwner(userId) && 
+                      isValidUser(request.resource.data) && 
+                      request.resource.data.role == 'student' &&
+                      !('isAdmin' in request.resource.data) &&
+                      request.resource.data.xp == 0 &&
+                      (!('unlockedCourses' in request.resource.data) || request.resource.data.unlockedCourses == ['a-plus'] || request.resource.data.unlockedCourses == []);
+      
+      allow update: if isAdmin() ||
+                       (isOwner(userId) && 
+                        isValidUser(request.resource.data) && 
+                        request.resource.data.role == resource.data.role &&
+                        !('isAdmin' in request.resource.data) &&
+                        request.resource.data.uid == resource.data.uid &&
+                        request.resource.data.email == resource.data.email &&
+                        request.resource.data.get('status', null) == resource.data.get('status', null) &&
+                        request.resource.data.xp >= resource.data.xp &&
+                        request.resource.data.xp <= resource.data.xp + 1000 &&
+                        isCodeRedemptionValid(userId));
+      
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Unlock Codes: Single get by signed-in users, full manage by admin, atomic redeem by student
+    match /unlock_codes/{code} {
+      allow get: if isAuthenticated();
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.usedBy == null &&
+        request.resource.data.usedBy == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy', 'usedAt'])
+      );
+    }
+
+    // Objective PDFs: Authenticated users can read objective PDF metadata to see availability; writes restricted to admins
+    match /objective_pdfs/{objectiveId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Test Results: Owners can read/write their own results
+    match /users/{userId}/testResults/{resultId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidTestResult(request.resource.data);
+      allow update: if (isOwner(userId) && isValidTestResult(request.resource.data)) || isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    match /users/{userId}/notes/{noteId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    match /users/{userId}/folders/{folderId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    match /users/{userId}/files/{fileId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    match /users/{userId}/todo/{todoId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    match /boss_challenges/{challengeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Leaderboard: readable by signed-in users, writable only by owner with synced xp, deletable by admin
+    match /leaderboard/{uid} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(uid) &&
+                              request.resource.data.keys().hasOnly(['uid', 'displayName', 'photoURL', 'xp', 'level', 'rank', 'rankTitle', 'rankColor', 'updatedAt']) &&
+                              request.resource.data.uid == request.auth.uid &&
+                              request.resource.data.xp == getAfter(/databases/$(database)/documents/users/$(uid)).data.xp;
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    match /boss_submissions/{submissionId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin() || (isAuthenticated() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending');
+      allow update, delete: if isAdmin();
+    }
+
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, delete: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /bossResponses/{responseId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      allow create: if (isAuthenticated() && isValidBossResponse(request.resource.data)) || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    match /shared_resources/{resourceId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.uploaderUid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /minigame_leaderboard/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /matchMaker_highscores/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /cli_leaderboard/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /external_links/{linkId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidExternalLink(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Announcements: readable by authenticated users, writable only by admins
+    match /announcements/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidAnnouncement(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Vacancies: readable by authenticated users, writable only by admins
+    match /vacancies/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidVacancy(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // News Items: readable by authenticated users, writable only by admins
+    match /news_items/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidNewsItem(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Student Reports: Admin read/write only
+    match /reports/{reportId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Report Verifications: Public GET by ID only (no list or query), admin write
+    match /report_verifications/{reportId} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if isAdmin();
+    }
+
+    // CV Clinic Cases: Authenticated students can read published cases, admins can read all; only admins write
+    match /cv_clinic_cases/{caseId} {
+      allow read: if isAuthenticated() && (resource.data.status == 'published' || isAdmin());
+      allow create, update: if isAdmin() && isValidCVClinicCase(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // CV Clinic Leaderboard: readable by authenticated users, writable only by owner, deletable by admin
+    match /cv_clinic_leaderboard/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Contract Red Flags Cases: Authenticated students read published, admins read all; only admins write
+    match /contract_cases/{caseId} {
+      allow read: if isAuthenticated() && (resource.data.status == 'published' || isAdmin());
+      allow create, update: if isAdmin() && isValidContractCase(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Reference Figures: readable by authenticated users, writable only by admins
+    match /reference_figures/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidReferenceFigures(request.resource.data);
+    }
+
+    // Contract Leaderboard: readable by authenticated users, writable only by owner, deletable by admin
+    match /contract_leaderboard/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // ===============================================================
+    // Landing Page Collections
+    // ===============================================================
+
+    // Reviews: Publicly readable; writable only by admins
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Top Students (POPIA compliant, only consented profiles are public)
+    match /topStudents/{studentId} {
+      allow read: if resource.data.consentGiven == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Interview Invites: Prospective employers can submit invites; read/manage by admin
+    match /interviewInvites/{inviteId} {
+      allow create: if request.resource.data.companyName is string &&
+                       request.resource.data.contactPerson is string &&
+                       request.resource.data.email is string;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Contact Messages: Public website visitors can submit inquiries; read/manage by admin
+    match /contactMessages/{messageId} {
+      allow create: if request.resource.data.name is string &&
+                       request.resource.data.email is string &&
+                       request.resource.data.message is string;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Landing Settings (Story & Stats): Publicly readable; writable only by admins
+    match /landingSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+
+  }
+}

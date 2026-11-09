@@ -1,0 +1,11 @@
+{
+  "name": "ITreal",
+  "description": "A high-fidelity, gamified learning platform for IT certifications, featuring hands-on practice, scenario simulators, and exam readiness.",
+  "requestFramePermissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
