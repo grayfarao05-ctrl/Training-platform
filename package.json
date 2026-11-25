@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
+    "@splinetool/runtime": "^2.0.203",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.2.2",
     "@types/canvas-confetti": "^1.9.0",
