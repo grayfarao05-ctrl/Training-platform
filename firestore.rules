@@ -493,6 +493,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // App Settings (e.g. Welcome Intro config): Publicly readable; writable only by admins
+    match /app_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Personalized Welcome Intro Short-Link Invites (/xtpkjs)
+    // Public can fetch a single invite by exact shortId and increment open tracking;
+    // only admins can list, create, or delete invites.
+    match /welcome_invites/{shortId} {
+      allow get: if true;
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'openedAt', 'openCount']) &&
+        request.resource.data.status == 'opened'
+      );
+    }
+
     // Default deny
     match /{path=**} {
       allow read, write: if false;

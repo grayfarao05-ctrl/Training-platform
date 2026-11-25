@@ -25,6 +25,14 @@ import CourseUnlockScreen from './components/CourseUnlockScreen';
 import LeaderboardView from './components/LeaderboardView';
 import { MyCoursesView } from './components/MyCoursesView';
 import HomePage from './components/HomePage';
+import { WelcomeIntro } from './components/WelcomeIntro';
+import {
+  fetchWelcomeInvite,
+  recordInviteOpened,
+  getWelcomeIntroSettings,
+  WelcomeIntroSettings,
+  DEFAULT_WELCOME_SETTINGS,
+} from './welcomeInvitesService';
 import { COMPTIA_DOMAINS, calculateLevel } from './constants';
 import { ViewState, Objective, UserStats, Domain, Todo, TestResult, CourseId, ObjectivePdf, CourseDoc } from './types';
 import { getCourseConfig, getCourseProgress, isCourseUnlocked, filterByCourse, withCourse, COURSE_LIST } from './courseConfig';
@@ -79,6 +87,73 @@ const App: React.FC = () => {
 
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showWelcomeIntro, setShowWelcomeIntro] = useState(() => {
+    return typeof window !== 'undefined' && window.location.search.includes('intro=1');
+  });
+  const [resolvingInvite, setResolvingInvite] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const pathSlug = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    return /^[a-z0-9]{6}$/i.test(pathSlug);
+  });
+  const [welcomeStudentName, setWelcomeStudentName] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      return new URLSearchParams(window.location.search).get('name') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [welcomeConfig, setWelcomeConfig] = useState<WelcomeIntroSettings>(DEFAULT_WELCOME_SETTINGS);
+
+  // Resolve short-link invite (/xtpkjs) & load Welcome Intro settings from Firestore
+  useEffect(() => {
+    let active = true;
+    const initWelcome = async () => {
+      try {
+        const cfg = await getWelcomeIntroSettings();
+        if (!active) return;
+        setWelcomeConfig(cfg);
+
+        const pathSlug =
+          typeof window !== 'undefined'
+            ? window.location.pathname.replace(/^\/+|\/+$/g, '')
+            : '';
+
+        if (/^[a-z0-9]{6}$/i.test(pathSlug)) {
+          const invite = await fetchWelcomeInvite(pathSlug);
+          if (!active) return;
+          if (invite) {
+            setWelcomeStudentName(invite.name);
+            setShowWelcomeIntro(true);
+            const openKey = `itreal_invite_opened_${invite.id}`;
+            if (typeof sessionStorage === 'undefined' || !sessionStorage.getItem(openKey)) {
+              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(openKey, '1');
+              recordInviteOpened(invite.id);
+            }
+          }
+          setResolvingInvite(false);
+          return;
+        }
+
+        const forced = typeof window !== 'undefined' && window.location.search.includes('intro=1');
+        if (!forced && cfg.enabledOnEntry) {
+          const alreadySeen =
+            cfg.showOncePerSession !== false &&
+            typeof sessionStorage !== 'undefined' &&
+            sessionStorage.getItem('itreal_welcome_seen') === '1';
+          if (!alreadySeen) {
+            setShowWelcomeIntro(true);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not initialize welcome intro:', err);
+      } finally {
+        if (active) setResolvingInvite(false);
+      }
+    };
+    initWelcome();
+    return () => { active = false; };
+  }, []);
   const prevLevelRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -285,21 +360,21 @@ const App: React.FC = () => {
       if (doc.exists()) {
         setUserStats(doc.data() as UserStats);
       }
-    }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.uid}`));
+    }, (error) => console.warn(`Could not listen to users/${user.uid}:`, error));
     unsubStatsRef.current = unsubStats;
 
     // Fetch user's specific tasks
     const tasksQuery = collection(db, `users/${user.uid}/todo`);
     const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
       setTasks(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Todo)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.uid}/todo`));
+    }, (error) => console.warn(`Could not listen to users/${user.uid}/todo:`, error));
     unsubTasksRef.current = unsubTasks;
 
     // Fetch user's specific test results
     const testResultsQuery = collection(db, `users/${user.uid}/testResults`);
     const unsubTests = onSnapshot(testResultsQuery, (snapshot) => {
       setTestResults(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as TestResult)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.uid}/testResults`));
+    }, (error) => console.warn(`Could not listen to users/${user.uid}/testResults:`, error));
     unsubTestResultsRef.current = unsubTests;
 
     return () => {
@@ -315,8 +390,12 @@ const App: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Real-time objectives updates (curriculum loaded immediately on boot with course isolation)
+  // Real-time objectives updates (only subscribe once authenticated to avoid watch-stream resets on login)
   useEffect(() => {
+    if (!user) {
+      setObjectives([]);
+      return;
+    }
     const unsubObjs = onSnapshot(collection(db, 'objectives'), (snapshot) => {
       const objs = snapshot.docs.map(d => {
         const data = d.data();
@@ -333,7 +412,7 @@ const App: React.FC = () => {
     }, (error) => console.warn('Could not load objectives:', error));
     unsubObjectivesRef.current = unsubObjs;
     return () => unsubObjs();
-  }, []);
+  }, [user]);
 
   // Real-time objective PDFs metadata map (badges on Content screen - only for authenticated users)
   useEffect(() => {
@@ -405,6 +484,31 @@ const App: React.FC = () => {
       });
     }
   };
+
+  if (resolvingInvite) {
+    return <div className="fixed inset-0 bg-[#03070d]" aria-hidden="true" />;
+  }
+
+  if (showWelcomeIntro) {
+    return (
+      <WelcomeIntro
+        studentName={welcomeStudentName}
+        buttonLabel={welcomeConfig.buttonLabel}
+        href={welcomeConfig.destination === 'custom' && welcomeConfig.href ? welcomeConfig.href : undefined}
+        onContinue={() => {
+          setShowWelcomeIntro(false);
+          try {
+            sessionStorage.setItem('itreal_welcome_seen', '1');
+            window.history.replaceState({}, '', '/');
+          } catch (_) {}
+          if (welcomeConfig.destination === 'signup' && !user) {
+            setPublicAuthMode('register');
+            setView('landing');
+          }
+        }}
+      />
+    );
+  }
 
   if (loading) {
     return (

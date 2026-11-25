@@ -82,6 +82,15 @@ export const LandingNav: React.FC<LandingNavProps> = ({ onLogin, activeSection }
             })}
           </div>
 
+          {/* Intro Animation Preview Link */}
+          <a
+            href="/?intro=1"
+            className="text-[14px] font-semibold text-[#0B3D91] hover:text-[#3BA7F2] transition-colors flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#0B3D91]/5 hover:bg-[#0B3D91]/10 border border-[#0B3D91]/15"
+            title="Watch the Welcome Intro animation"
+          >
+            <span>✨ Watch Intro</span>
+          </a>
+
           {/* Log in Button: Ocean Breeze Primary Pill */}
           <button
             type="button"

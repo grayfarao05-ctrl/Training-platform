@@ -38,9 +38,14 @@ export interface TopStudentItem {
   id: string;
   firstName: string;
   surnameInitial: string; // e.g. "M."
+  lastName?: string;
   schoolOrArea: string;
+  location?: string;
   track: string; // 'CompTIA A+' | 'CompTIA Network+' | 'Matric to Money'
   score: number; // Readiness / score %
+  examReadiness?: number;
+  mocksPassed?: number;
+  streakDays?: number;
   tags: string[];
   rank: number; // 1-5
   consentGiven: boolean;

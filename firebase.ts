@@ -1,7 +1,7 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { 
-  getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, onSnapshot, 
+  getFirestore, initializeFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, onSnapshot, 
   getDocFromServer, Timestamp, addDoc, serverTimestamp, orderBy, deleteDoc, increment, arrayUnion, writeBatch, 
   deleteField, terminate, clearIndexedDbPersistence 
 } from 'firebase/firestore';
@@ -19,10 +19,21 @@ const firebaseConfig = {
 
 const databaseId = firebaseAppletConfig.firestoreDatabaseId || import.meta.env.VITE_FIREBASE_DATABASE_ID;
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase (HMR-safe)
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+const firestoreSettings = {
+  experimentalForceLongPolling: true,
+};
+let dbInstance;
+try {
+  dbInstance = databaseId
+    ? initializeFirestore(app, firestoreSettings, databaseId)
+    : initializeFirestore(app, firestoreSettings);
+} catch {
+  dbInstance = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+}
+export const db = dbInstance;
 export const storage = getStorage(app);
 storage.maxOperationRetryTime = 6000; // 6s timeout instead of 120s default to prevent hanging
 export const googleProvider = new GoogleAuthProvider();
@@ -142,14 +153,5 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Connection Test
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. The client is offline.");
-    }
-  }
-}
-testConnection();
+// Note: Avoid running an unauthenticated getDocFromServer() on module load,
+// as it races with Firestore watch streams during auth transitions (SDK ID: ca9/b815).

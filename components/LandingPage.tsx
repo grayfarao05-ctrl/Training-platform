@@ -35,7 +35,11 @@ import {
   InviteInterviewModal,
   StudentReportCardModal,
 } from './landing/TopStudentModals';
-import { SplineHero } from './SplineHero';
+import {
+  StarfieldBackdrop,
+  SpotlightCard,
+  LandingMotionStyles,
+} from './landing/LandingMotion';
 
 interface LandingPageProps {
   userName?: string;
@@ -323,7 +327,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   }, []);
 
   return (
-    <div ref={rootRef} className="min-h-screen bg-[#000000] text-[#FFFFFF] font-sans antialiased selection:bg-[#313131] selection:text-white">
+    <div ref={rootRef} className="min-h-screen bg-[#03070d] text-[#FFFFFF] font-sans antialiased selection:bg-cyan-500 selection:text-white relative">
+      <LandingMotionStyles />
+      <StarfieldBackdrop />
+
       {/* =====================================================================
           HEADER / FLOATING NAVIGATION BAR (B7 Compliant)
           Floating compact bar off top edge, translucent surface, background blur
@@ -334,9 +341,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           aria-label="Main Navigation"
         >
           {/* Logo */}
-          <a href="#top" className="flex items-center gap-2.5 text-white focus-visible:ring-2 focus-visible:ring-white rounded-md">
-            <img src="/assets/itreal-icon.png" alt="ITreal" className="w-5 h-5 object-contain" />
-            <span className="font-semibold text-sm tracking-tight">ITreal</span>
+          <a href="#top" className="flex items-center focus-visible:ring-2 focus-visible:ring-white rounded-md" aria-label="ITreal Home">
+            <img src="/assets/itreal-nav-logo.png" alt="ITreal" className="h-9 sm:h-10 w-auto object-contain" />
           </a>
 
           {/* Links */}
@@ -375,104 +381,55 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             >
               {userName ? 'Portal' : 'Log in'}
             </button>
-            <button
-              onClick={handleRegister}
-              className="py-1.5 px-4 rounded-full text-xs font-semibold bg-white text-black hover:bg-[#E5E5E5] active:scale-[0.98] transition-all duration-300 focus-visible:ring-2 focus-visible:ring-white"
-            >
-              Start free
-            </button>
           </div>
         </nav>
       </header>
 
       <main>
         {/* =====================================================================
-            1. HERO SECTION (B5 & A2 Compliant)
-            Heading with #FFFFFF -> #9B9B9B gradient, max 680px, left aligned,
-            Spline 3D robot on the right, integrated interactive preview
+            1. HERO SECTION — Full-bleed looping MP4 video + translucent tech overlay
             ===================================================================== */}
-        <section id="top" className="relative pt-32 md:pt-40 pb-16 px-4 bg-[#000000] overflow-hidden">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center" data-reveal>
-              {/* Left Column: Heading, Subheading, Primary CTA & Proof */}
-              <div className="lg:col-span-7 text-center lg:text-left z-10">
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.08] text-balance max-w-[680px] mx-auto lg:mx-0">
-                  <span className="bg-gradient-to-r from-[#FFFFFF] to-[#9B9B9B] bg-clip-text text-transparent">
-                    Master IT fast
-                  </span>{' '}
-                  <span>when exams and careers call</span>
+        <section
+          id="top"
+          className="relative w-full h-[100dvh] min-h-[540px] bg-[#000000] overflow-hidden select-none flex items-center"
+          aria-label="ITreal hero video"
+        >
+          <video
+            src="/assets/hero-loop.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+
+          {/* Subtle left-side readability gradient so the video shines through */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent pointer-events-none"
+          />
+
+          {/* Full-Width Edge-to-Edge Translucent Glass Layer */}
+          <div className="relative z-10 w-full bg-black/25 backdrop-blur-[5px] border-y border-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.45)] mt-14">
+            <div className="w-full px-5 sm:px-8 lg:px-10 py-8 sm:py-10 md:py-12 border-l-2 border-l-cyan-400/75">
+              <div className="max-w-2xl text-left">
+                <h1
+                  className="text-3xl sm:text-5xl lg:text-[3.35rem] font-black uppercase tracking-[0.04em] leading-[1.08] text-white/85 drop-shadow-[0_2px_20px_rgba(0,180,255,0.28)]"
+                  style={{ fontFamily: "'Orbitron', sans-serif" }}
+                >
+                  THE FUTURE RUNS ON HARDWARE.{' '}
+                  <span className="block mt-2 bg-gradient-to-r from-cyan-300/95 via-sky-300/90 to-blue-400/90 bg-clip-text text-transparent">
+                    MASTER IT.
+                  </span>
                 </h1>
 
-                <p className="mt-4 text-base sm:text-lg text-[#9B9B9B] max-w-[680px] mx-auto lg:mx-0 leading-relaxed text-pretty">
-                  Comprehensive CompTIA A+, Network+, practical workplace AI, and career readiness training designed for South African learners.
+                <p
+                  className="mt-5 text-base sm:text-lg md:text-xl font-semibold leading-relaxed text-slate-100/80 max-w-xl tracking-[0.015em]"
+                  style={{ fontFamily: "'Chakra Petch', sans-serif" }}
+                >
+                  Uncover what happens under the hood—from silicon architecture and server builds to core network routing and defense.
                 </p>
-
-                {/* Primary CTA button (8px vertical, 16px horizontal per B2) */}
-                <div className="mt-6 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
-                  <button
-                    onClick={handleRegister}
-                    className="w-full sm:w-auto py-2.5 px-6 rounded-lg text-base font-semibold bg-white text-black hover:bg-[#E5E5E5] active:scale-[0.98] transition-all duration-300 focus-visible:ring-2 focus-visible:ring-white flex items-center justify-center gap-2"
-                  >
-                    <span>Start learning free</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                  <a
-                    href="#courses"
-                    className="w-full sm:w-auto py-2.5 px-5 rounded-lg text-base font-semibold bg-[#181818] border border-[#272727] text-white hover:bg-[#272727] active:scale-[0.98] transition-all duration-300 focus-visible:ring-2 focus-visible:ring-white text-center"
-                  >
-                    Explore tracks
-                  </a>
-                </div>
-
-                {/* Proof signal */}
-                <div className="mt-6 flex items-center justify-center lg:justify-start gap-4 text-xs text-[#9B9B9B]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span>240 active learners</span>
-                  </div>
-                  <span>·</span>
-                  <span>38 verified mocks passed</span>
-                  <span>·</span>
-                  <span>No credit card required</span>
-                </div>
-              </div>
-
-              {/* Right Column: Interactive 3D Spline Asset */}
-              <div className="lg:col-span-5 flex items-center justify-center z-0">
-                <SplineHero sceneUrl="https://prod.spline.design/IZy0m-pY1RzYoPyF/scene.splinecode" />
-              </div>
-            </div>
-
-            {/* Dashboard Preview Tile (tucked seamlessly below hero) */}
-            <div className="mt-6 max-w-5xl mx-auto rounded-2xl bg-[#181818] border border-[#272727] p-5 sm:p-6 shadow-2xl" data-reveal>
-              <div className="flex items-center justify-between pb-4 border-b border-[#272727]">
-                <div className="flex items-center gap-2.5">
-                  <img src="/assets/itreal-icon.png" alt="ITreal" className="w-4 h-4 object-contain" />
-                  <span className="text-sm font-semibold text-white">ITreal student overview</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-[#9B9B9B]">
-                  <span className="px-2.5 py-1 rounded bg-[#272727] text-white font-medium">Core 1 72%</span>
-                  <span className="px-2.5 py-1 rounded bg-[#272727] text-white font-medium">Core 2 58%</span>
-                  <span className="hidden sm:inline px-2.5 py-1 rounded bg-[#272727] text-white font-medium">Network+ 40%</span>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 rounded-lg bg-[#1F1F1F] border border-[#272727]">
-                  <span className="text-xs text-[#9B9B9B]">Hardware mastery</span>
-                  <p className="text-xl font-semibold text-white mt-0.5">98%</p>
-                  <span className="text-[11px] text-emerald-400">14 arcade drills cleared</span>
-                </div>
-                <div className="p-3.5 rounded-lg bg-[#1F1F1F] border border-[#272727]">
-                  <span className="text-xs text-[#9B9B9B]">Networking domain</span>
-                  <p className="text-xl font-semibold text-white mt-0.5">91%</p>
-                  <span className="text-[11px] text-emerald-400">Subnetting exam ready</span>
-                </div>
-                <div className="p-3.5 rounded-lg bg-[#1F1F1F] border border-[#272727]">
-                  <span className="text-xs text-[#9B9B9B]">Active study streak</span>
-                  <p className="text-xl font-semibold text-white mt-0.5">25 days</p>
-                  <span className="text-[11px] text-indigo-400">Consistent diagnostic pace</span>
-                </div>
               </div>
             </div>
           </div>
@@ -486,11 +443,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             3. PROBLEM TO SOLUTION (A2 Mid Page Argument)
             ===================================================================== */}
-        <section className="py-20 px-4 bg-[#000000]">
+        <section className="relative z-10 py-20 px-4 bg-[#03070d]/70">
           <div className="max-w-4xl mx-auto" data-reveal>
             <div className="text-center">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#9B9B9B]">The certification gap</span>
-              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-2 text-balance">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest text-cyan-300 bg-cyan-500/10 border border-cyan-400/20 landing-float-slow">
+                The certification gap
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-3 text-balance">
                 Memorizing questions is why candidates fail exam day
               </h2>
               <p className="mt-3 text-base text-[#9B9B9B] max-w-[640px] mx-auto text-pretty">
@@ -498,8 +457,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </p>
             </div>
 
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-6 rounded-2xl bg-[#181818] border border-[#272727]">
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-5">
+              <SpotlightCard delayMs={0} accent="rose" className="p-6">
                 <span className="text-xs font-semibold text-rose-400 uppercase tracking-wide">Traditional training</span>
                 <h3 className="text-lg font-semibold text-white mt-2">Passive reading and question dumps</h3>
                 <ul className="mt-4 space-y-2.5 text-sm text-[#9B9B9B]">
@@ -516,9 +475,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <span>Panic on interactive PBQ exam questions</span>
                   </li>
                 </ul>
-              </div>
+              </SpotlightCard>
 
-              <div className="p-6 rounded-2xl bg-[#181818] border border-[#313131]">
+              <SpotlightCard delayMs={120} accent="emerald" className="p-6">
                 <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">The ITreal way</span>
                 <h3 className="text-lg font-semibold text-white mt-2">Interactive diagnostic labs and drills</h3>
                 <ul className="mt-4 space-y-2.5 text-sm text-[#9B9B9B]">
@@ -535,7 +494,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <span>3D hardware inspection before you sit the exam</span>
                   </li>
                 </ul>
-              </div>
+              </SpotlightCard>
             </div>
           </div>
         </section>
@@ -543,45 +502,47 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             4. OUTCOME DRIVEN BENEFITS (A2 & A5 Compliant)
             ===================================================================== */}
-        <section className="py-20 px-4 bg-[#181818] border-t border-[#272727]">
+        <section className="relative z-10 py-20 px-4 bg-[#07111d]/75 border-t border-white/[0.07]">
           <div className="max-w-5xl mx-auto" data-reveal>
             <div className="text-center max-w-[680px] mx-auto">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#9B9B9B]">Outcome driven training</span>
-              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-2 text-balance">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest text-cyan-300 bg-cyan-500/10 border border-cyan-400/20 landing-float-slow">
+                Outcome driven training
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-3 text-balance">
                 Built to get you certified and hired
               </h2>
             </div>
 
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-6 rounded-2xl bg-[#1F1F1F] border border-[#272727]">
-                <div className="w-10 h-10 rounded-lg bg-[#272727] flex items-center justify-center text-white">
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-5">
+              <SpotlightCard delayMs={0} accent="cyan" className="p-6">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-400/25 flex items-center justify-center text-cyan-300 landing-float">
                   <Terminal className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-semibold text-white mt-4">Hands on diagnostic drills</h3>
                 <p className="mt-2 text-sm text-[#9B9B9B] leading-relaxed">
                   Solve real operating system errors, network timeouts, and hardware faults in simulated environments instead of reading static theory.
                 </p>
-              </div>
+              </SpotlightCard>
 
-              <div className="p-6 rounded-2xl bg-[#1F1F1F] border border-[#272727]">
-                <div className="w-10 h-10 rounded-lg bg-[#272727] flex items-center justify-center text-white">
+              <SpotlightCard delayMs={100} accent="indigo" className="p-6">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-400/25 flex items-center justify-center text-indigo-300 landing-float-slow">
                   <Award className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-semibold text-white mt-4">Exam verified curriculum</h3>
                 <p className="mt-2 text-sm text-[#9B9B9B] leading-relaxed">
                   Every domain corresponds directly to CompTIA A+ and Network+ specifications so you never spend hours on outdated material.
                 </p>
-              </div>
+              </SpotlightCard>
 
-              <div className="p-6 rounded-2xl bg-[#1F1F1F] border border-[#272727]">
-                <div className="w-10 h-10 rounded-lg bg-[#272727] flex items-center justify-center text-white">
+              <SpotlightCard delayMs={200} accent="emerald" className="p-6">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center text-emerald-300 landing-float">
                   <Briefcase className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-semibold text-white mt-4">South African career launchpad</h3>
                 <p className="mt-2 text-sm text-[#9B9B9B] leading-relaxed">
                   Create ATS compliant resumes, understand BCEA contract rights, and showcase verified exam scores directly to recruiting employers.
                 </p>
-              </div>
+              </SpotlightCard>
             </div>
           </div>
         </section>
@@ -589,39 +550,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             5. HOW IT WORKS (A2: 3 steps)
             ===================================================================== */}
-        <section id="how-it-works" className="py-20 px-4 bg-[#000000] border-t border-[#272727]">
+        <section id="how-it-works" className="relative z-10 py-20 px-4 bg-[#03070d]/70 border-t border-white/[0.07]">
           <div className="max-w-4xl mx-auto" data-reveal>
             <div className="text-center max-w-[680px] mx-auto">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#9B9B9B]">Step by step framework</span>
-              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-2 text-balance">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest text-cyan-300 bg-cyan-500/10 border border-cyan-400/20 landing-float-slow">
+                Step by step framework
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-3 text-balance">
                 Three steps from zero to certified
               </h2>
             </div>
 
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-6 rounded-2xl bg-[#181818] border border-[#272727] relative">
-                <span className="text-2xl font-bold text-[#313131]">01</span>
+              <SpotlightCard delayMs={0} accent="cyan" className="p-6 relative">
+                <span className="text-3xl font-black text-cyan-400/35 group-hover:text-cyan-400/80 transition-colors font-mono">01</span>
                 <h3 className="text-base font-semibold text-white mt-2">Diagnose weak areas</h3>
                 <p className="mt-2 text-sm text-[#9B9B9B] leading-relaxed">
                   Take a 10 minute domain assessment that flags your specific gaps across hardware, subnetting, and command line tools.
                 </p>
-              </div>
+              </SpotlightCard>
 
-              <div className="p-6 rounded-2xl bg-[#181818] border border-[#272727] relative">
-                <span className="text-2xl font-bold text-[#313131]">02</span>
+              <SpotlightCard delayMs={110} accent="indigo" className="p-6 relative">
+                <span className="text-3xl font-black text-indigo-400/35 group-hover:text-indigo-400/80 transition-colors font-mono">02</span>
                 <h3 className="text-base font-semibold text-white mt-2">Master interactive labs</h3>
                 <p className="mt-2 text-sm text-[#9B9B9B] leading-relaxed">
                   Practice with high speed arcade games, terminal simulations, and practical exercises until your domain accuracy passes 85%.
                 </p>
-              </div>
+              </SpotlightCard>
 
-              <div className="p-6 rounded-2xl bg-[#181818] border border-[#272727] relative">
-                <span className="text-2xl font-bold text-[#313131]">03</span>
+              <SpotlightCard delayMs={220} accent="emerald" className="p-6 relative">
+                <span className="text-3xl font-black text-emerald-400/35 group-hover:text-emerald-400/80 transition-colors font-mono">03</span>
                 <h3 className="text-base font-semibold text-white mt-2">Clear verified mocks</h3>
                 <p className="mt-2 text-sm text-[#9B9B9B] leading-relaxed">
                   Pass timed full-length mock examinations under genuine exam pressure and export your employer verified skill report.
                 </p>
-              </div>
+              </SpotlightCard>
             </div>
           </div>
         </section>
@@ -629,51 +592,58 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             6. COURSE TRACKS SHOWCASE
             ===================================================================== */}
-        <section id="courses" className="py-20 px-4 bg-[#181818] border-t border-[#272727]">
+        <section id="courses" className="relative z-10 py-20 px-4 bg-[#07111d]/75 border-t border-white/[0.07]">
           <div className="max-w-5xl mx-auto" data-reveal>
             <div className="text-center max-w-[680px] mx-auto">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#9B9B9B]">Structured syllabus</span>
-              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-2 text-balance">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest text-cyan-300 bg-cyan-500/10 border border-cyan-400/20 landing-float-slow">
+                Structured syllabus
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-3 text-balance">
                 Four comprehensive training tracks
               </h2>
             </div>
 
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {COURSE_TRACKS.map((course) => (
-                <div key={course.id} className="p-6 rounded-2xl bg-[#1F1F1F] border border-[#272727] flex flex-col justify-between">
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-5">
+              {COURSE_TRACKS.map((course, idx) => (
+                <SpotlightCard
+                  key={course.id}
+                  delayMs={idx * 90}
+                  accent={idx % 2 === 0 ? 'cyan' : 'indigo'}
+                  className="p-6 flex flex-col justify-between"
+                >
                   <div>
                     <div className="flex items-center justify-between">
-                      <div className="w-9 h-9 rounded-lg bg-[#272727] flex items-center justify-center text-white">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-400/25 flex items-center justify-center text-cyan-300 transition-transform duration-300 group-hover:scale-110">
                         <course.Icon className="w-4 h-4" />
                       </div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-[#9B9B9B] px-2.5 py-0.5 rounded bg-[#272727]">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-cyan-200/80 px-2.5 py-0.5 rounded-full bg-white/[0.06] border border-white/10">
                         {course.badge}
                       </span>
                     </div>
 
-                    <h3 className="text-lg font-semibold text-white mt-4">{course.title}</h3>
-                    <span className="text-xs text-indigo-400 font-mono mt-0.5 block">{course.code}</span>
+                    <h3 className="text-lg font-semibold text-white mt-4 group-hover:text-cyan-200 transition-colors">{course.title}</h3>
+                    <span className="text-xs text-cyan-400 font-mono mt-0.5 block">{course.code}</span>
                     <p className="mt-2.5 text-sm text-[#9B9B9B] leading-relaxed">{course.description}</p>
 
                     <div className="mt-4 flex flex-wrap gap-1.5">
                       {course.domains.map((dom) => (
-                        <span key={dom} className="text-[11px] px-2.5 py-1 rounded bg-[#272727] text-white">
+                        <span key={dom} className="text-[11px] px-2.5 py-1 rounded-md bg-white/[0.05] border border-white/[0.08] text-slate-200">
                           {dom}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-[#272727]">
+                  <div className="mt-6 pt-4 border-t border-white/[0.08]">
                     <button
                       onClick={handleRegister}
-                      className="text-xs font-semibold text-white hover:text-indigo-300 flex items-center gap-1.5 transition-colors duration-300"
+                      className="text-xs font-semibold text-cyan-300 hover:text-white flex items-center gap-1.5 transition-colors duration-300 cursor-pointer"
                     >
                       <span>Start this course track</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-1" />
                     </button>
                   </div>
-                </div>
+                </SpotlightCard>
               ))}
             </div>
           </div>
@@ -682,11 +652,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             7. INTERACTIVE ARCADE SECTION
             ===================================================================== */}
-        <section id="arcade" className="py-20 px-4 bg-[#000000] border-t border-[#272727]">
+        <section id="arcade" className="relative z-10 py-20 px-4 bg-[#03070d]/70 border-t border-white/[0.07]">
           <div className="max-w-5xl mx-auto" data-reveal>
             <div className="text-center max-w-[680px] mx-auto">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#9B9B9B]">Muscle memory drills</span>
-              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-2 text-balance">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest text-cyan-300 bg-cyan-500/10 border border-cyan-400/20 landing-float-slow">
+                Muscle memory drills
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-3 text-balance">
                 The ITreal arcade labs
               </h2>
               <p className="mt-3 text-base text-[#9B9B9B]">
@@ -695,23 +667,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {ARCADE_GAMES.map((game) => (
-                <div key={game.name} className="p-5 rounded-2xl bg-[#181818] border border-[#272727] flex flex-col justify-between">
+              {ARCADE_GAMES.map((game, idx) => (
+                <SpotlightCard
+                  key={game.name}
+                  delayMs={idx * 85}
+                  accent="cyan"
+                  className="p-5 flex flex-col justify-between"
+                >
                   <div>
-                    <div className="w-9 h-9 rounded-lg bg-[#272727] flex items-center justify-center text-white">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-400/25 flex items-center justify-center text-cyan-300 landing-float">
                       <game.Icon className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] text-indigo-400 font-mono mt-3 block">{game.category}</span>
+                    <span className="text-[11px] text-cyan-400 font-mono mt-3 block">{game.category}</span>
                     <h3 className="text-base font-semibold text-white mt-1">{game.name}</h3>
                     <p className="mt-2 text-xs text-[#9B9B9B] leading-relaxed">{game.desc}</p>
                   </div>
                   <button
                     onClick={handleRegister}
-                    className="mt-5 w-full py-2 rounded-lg text-xs font-semibold bg-[#272727] text-white hover:bg-[#313131] transition-all duration-300"
+                    className="mt-5 w-full py-2 rounded-lg text-xs font-semibold bg-white/[0.07] hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-400/40 text-white transition-all duration-300 cursor-pointer"
                   >
                     Play lab
                   </button>
-                </div>
+                </SpotlightCard>
               ))}
             </div>
           </div>
@@ -720,11 +697,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             8. SOCIAL PROOF & TOP STUDENTS TALENT POOL
             ===================================================================== */}
-        <section id="talent" className="py-20 px-4 bg-[#181818] border-t border-[#272727]">
+        <section id="talent" className="relative z-10 py-20 px-4 bg-[#07111d]/75 border-t border-white/[0.07]">
           <div className="max-w-5xl mx-auto" data-reveal>
             <div className="text-center max-w-[680px] mx-auto">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#9B9B9B]">Employer talent pool</span>
-              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-2 text-balance">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 landing-float-slow">
+                Employer talent pool
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-3 text-balance">
                 Real student outcomes
               </h2>
               <p className="mt-3 text-base text-[#9B9B9B]">
@@ -732,12 +711,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </p>
             </div>
 
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {publicStudents.map((st) => (
-                <div key={st.id} className="p-5 rounded-2xl bg-[#1F1F1F] border border-[#272727] flex flex-col justify-between">
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-5">
+              {publicStudents.map((st, idx) => (
+                <SpotlightCard
+                  key={st.id}
+                  delayMs={idx * 95}
+                  accent="emerald"
+                  className="p-5 flex flex-col justify-between"
+                >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white px-2 py-0.5 rounded bg-[#272727]">
+                      <span className="text-xs font-bold text-white px-2.5 py-0.5 rounded-full bg-white/[0.08] border border-white/10">
                         Rank #{st.rank}
                       </span>
                       <span className="text-xs text-emerald-400 font-mono font-medium">
@@ -750,7 +734,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     </h3>
                     <span className="text-xs text-[#9B9B9B]">{st.location || 'Western Cape, South Africa'}</span>
 
-                    <div className="mt-4 pt-3 border-t border-[#272727] space-y-1.5 text-xs text-[#9B9B9B]">
+                    <div className="mt-4 pt-3 border-t border-white/[0.08] space-y-1.5 text-xs text-[#9B9B9B]">
                       <div className="flex justify-between">
                         <span>Mocks cleared</span>
                         <span className="text-white font-medium">{st.mocksPassed || 12}</span>
@@ -765,18 +749,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="mt-5 grid grid-cols-2 gap-2">
                     <button
                       onClick={() => setActiveReportStudent(st)}
-                      className="py-1.5 px-3 rounded-lg text-xs font-semibold bg-[#272727] text-white hover:bg-[#313131] transition-all duration-300 text-center"
+                      className="py-1.5 px-3 rounded-lg text-xs font-semibold bg-white/[0.07] hover:bg-white/[0.14] border border-white/10 text-white transition-all duration-300 text-center cursor-pointer"
                     >
                       Report card
                     </button>
                     <button
                       onClick={() => setActiveInterviewStudent(st)}
-                      className="py-1.5 px-3 rounded-lg text-xs font-semibold bg-white text-black hover:bg-[#E5E5E5] transition-all duration-300 text-center"
+                      className="py-1.5 px-3 rounded-lg text-xs font-semibold bg-white text-black hover:bg-cyan-200 transition-all duration-300 text-center cursor-pointer"
                     >
                       Interview
                     </button>
                   </div>
-                </div>
+                </SpotlightCard>
               ))}
             </div>
           </div>
@@ -785,11 +769,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             9. FAQ ACCORDION (A2 Objection Handling, 8 items)
             ===================================================================== */}
-        <section id="faq" className="py-20 px-4 bg-[#000000] border-t border-[#272727]">
+        <section id="faq" className="relative z-10 py-20 px-4 bg-[#03070d]/70 border-t border-white/[0.07]">
           <div className="max-w-3xl mx-auto" data-reveal>
             <div className="text-center max-w-[680px] mx-auto">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#9B9B9B]">Common questions</span>
-              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-2 text-balance">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest text-cyan-300 bg-cyan-500/10 border border-cyan-400/20 landing-float-slow">
+                Common questions
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white mt-3 text-balance">
                 Frequently asked questions
               </h2>
             </div>
@@ -798,28 +784,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {FAQS.map((faq, idx) => {
                 const isOpen = activeFaq === idx;
                 return (
-                  <div
+                  <SpotlightCard
                     key={idx}
-                    className="rounded-xl bg-[#181818] border border-[#272727] overflow-hidden transition-colors duration-300"
+                    delayMs={idx * 45}
+                    accent="cyan"
+                    className="overflow-hidden"
                   >
                     <button
                       onClick={() => setActiveFaq(isOpen ? null : idx)}
-                      className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 text-white focus-visible:ring-2 focus-visible:ring-white"
+                      className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 text-white focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
                       aria-expanded={isOpen}
                     >
                       <span className="text-sm sm:text-base font-semibold">{faq.q}</span>
                       <ChevronDown
-                        className={`w-4 h-4 text-[#9B9B9B] transition-transform duration-300 ${
-                          isOpen ? 'rotate-180 text-white' : ''
+                        className={`w-4 h-4 text-[#9B9B9B] transition-transform duration-300 shrink-0 ${
+                          isOpen ? 'rotate-180 text-cyan-300' : ''
                         }`}
                       />
                     </button>
                     {isOpen && (
-                      <div className="px-4 pb-4 sm:px-5 sm:pb-5 text-sm text-[#9B9B9B] leading-relaxed border-t border-[#272727] pt-3 text-pretty">
+                      <div className="px-4 pb-4 sm:px-5 sm:pb-5 text-sm text-[#9B9B9B] leading-relaxed border-t border-white/[0.07] pt-3 text-pretty">
                         {faq.a}
                       </div>
                     )}
-                  </div>
+                  </SpotlightCard>
                 );
               })}
             </div>
@@ -829,7 +817,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             10. FINAL CTA SECTION (A2 & A4: Identical primary CTA & risk reversal)
             ===================================================================== */}
-        <section className="py-20 px-4 bg-[#181818] border-t border-[#272727] text-center">
+        <section className="relative z-10 py-24 px-4 bg-[#07111d]/80 border-t border-white/[0.07] text-center overflow-hidden">
           <div className="max-w-2xl mx-auto" data-reveal>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white text-balance">
               Start building verified IT skills today
@@ -841,7 +829,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
                 onClick={handleRegister}
-                className="w-full sm:w-auto py-2.5 px-6 rounded-lg text-base font-semibold bg-white text-black hover:bg-[#E5E5E5] active:scale-[0.98] transition-all duration-300 focus-visible:ring-2 focus-visible:ring-white flex items-center justify-center gap-2"
+                className="w-full sm:w-auto py-3 px-7 rounded-xl text-base font-semibold bg-white text-black hover:bg-cyan-100 hover:shadow-[0_0_30px_rgba(56,189,248,0.45)] active:scale-[0.98] transition-all duration-300 focus-visible:ring-2 focus-visible:ring-white flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Start learning free</span>
                 <ArrowRight className="w-4 h-4" />
@@ -850,7 +838,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto py-2.5 px-5 rounded-lg text-base font-semibold bg-[#272727] border border-[#313131] text-white hover:bg-[#313131] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2"
+                className="w-full sm:w-auto py-3 px-6 rounded-xl text-base font-semibold bg-white/[0.07] border border-white/15 text-white hover:bg-white/[0.14] hover:border-emerald-400/40 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-400" />
                 <span>WhatsApp advisor</span>
@@ -867,7 +855,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* =====================================================================
           11. SEMANTIC FOOTER (B10 Ship Requirements)
           ===================================================================== */}
-      <footer className="py-12 px-4 bg-[#000000] border-t border-[#272727] text-xs text-[#9B9B9B]">
+      <footer className="relative z-10 py-12 px-4 bg-[#03070d]/90 border-t border-white/[0.07] text-xs text-[#9B9B9B]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
             <img src="/assets/itreal-icon.png" alt="ITreal" className="w-4 h-4 object-contain" />

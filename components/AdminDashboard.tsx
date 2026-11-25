@@ -16,7 +16,8 @@ import {
   Home as HomeIcon,
   Globe,
   Award,
-  UserCheck
+  UserCheck,
+  Sparkles
 } from 'lucide-react';
 import { db, storage, OperationType, handleFirestoreError } from '../firebase';
 import { collection, onSnapshot, doc, deleteDoc, query, orderBy } from 'firebase/firestore';
@@ -39,6 +40,7 @@ import AdminHomeContentTab from './admin/AdminHomeContentTab';
 import AdminLandingTab from './admin/AdminLandingTab';
 import AdminChallengesTab from './admin/AdminChallengesTab';
 import AdminAvatarsTab from './admin/AdminAvatarsTab';
+import AdminWelcomeIntroTab from './admin/AdminWelcomeIntroTab';
 import ConfirmDeleteModal from './admin/ConfirmDeleteModal';
 
 interface AdminDashboardProps {
@@ -46,7 +48,7 @@ interface AdminDashboardProps {
   initialCourse?: CourseId;
 }
 
-export type AdminTabType = 'courses' | 'objectives' | 'users' | 'avatars' | 'challenges' | 'questions' | 'stats' | 'boss' | 'arcade' | 'links' | 'home-content' | 'landing';
+export type AdminTabType = 'courses' | 'objectives' | 'users' | 'avatars' | 'challenges' | 'questions' | 'stats' | 'boss' | 'arcade' | 'links' | 'home-content' | 'landing' | 'welcome-intro';
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, initialCourse }) => {
   const [adminCourse, setAdminCourse] = useState<CourseId>(initialCourse || 'a-plus');
@@ -83,68 +85,81 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, initialCourse }
   }, [activeTab, adminCourse]);
 
   useEffect(() => {
-    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      setUsers(snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserStats)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'users'));
+    let cancelled = false;
+    const unsubs: (() => void)[] = [];
 
-    const unsubscribeObjectives = onSnapshot(collection(db, 'objectives'), (snapshot) => {
-      setObjectives(snapshot.docs.map(d => {
-        const data = d.data();
-        const course = data.course || (d.id.includes('_') ? d.id.split('_')[0] : 'a-plus');
-        const cleanId = data.id || (d.id.includes('_') ? d.id.slice(course.length + 1) : d.id);
-        return {
-          ...data,
-          id: cleanId,
-          docId: d.id,
-          course
-        } as Objective;
-      }));
-      setLoading(false);
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'objectives'));
+    // Defer listener attachment by one tick so React StrictMode's rapid
+    // mount/unmount cycle doesn't trigger Firestore SDK TargetState (ca9/b815) races.
+    const timer = setTimeout(() => {
+      if (cancelled) return;
 
-    const unsubscribeBosses = onSnapshot(collection(db, 'boss_challenges'), (snapshot) => {
-      setBossChallenges(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as WeeklyBossChallenge)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'boss_challenges'));
+      const safeErr = (path: string) => (error: unknown) => {
+        console.warn(`AdminDashboard listener warning (${path}):`, error);
+      };
 
-    const unsubscribeSubmissions = onSnapshot(collection(db, 'boss_submissions'), (snapshot) => {
-      setBossSubmissions(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as WeeklyBossSubmission)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'boss_submissions'));
+      unsubs.push(
+        onSnapshot(collection(db, 'users'), (snapshot) => {
+          setUsers(snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserStats)));
+        }, safeErr('users')),
 
-    const unsubscribeLeaderboard = onSnapshot(collection(db, 'minigame_leaderboard'), (snapshot) => {
-      setLeaderboard(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as MinigameLeaderboard)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'minigame_leaderboard'));
+        onSnapshot(collection(db, 'objectives'), (snapshot) => {
+          setObjectives(snapshot.docs.map(d => {
+            const data = d.data();
+            const course = data.course || (d.id.includes('_') ? d.id.split('_')[0] : 'a-plus');
+            const cleanId = data.id || (d.id.includes('_') ? d.id.slice(course.length + 1) : d.id);
+            return {
+              ...data,
+              id: cleanId,
+              docId: d.id,
+              course
+            } as Objective;
+          }));
+          setLoading(false);
+        }, (error) => {
+          console.warn('AdminDashboard listener warning (objectives):', error);
+          setLoading(false);
+        }),
 
-    const unsubscribeTrioLeaderboard = onSnapshot(collection(db, 'matchMaker_highscores'), (snapshot) => {
-      setTrioLeaderboard(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as MatchMakerHighscore)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'matchMaker_highscores'));
+        onSnapshot(collection(db, 'boss_challenges'), (snapshot) => {
+          setBossChallenges(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as WeeklyBossChallenge)));
+        }, safeErr('boss_challenges')),
 
-    const unsubscribeCliLeaderboard = onSnapshot(collection(db, 'cli_leaderboard'), (snapshot) => {
-      setCliLeaderboard(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CliLeaderboard)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'cli_leaderboard'));
+        onSnapshot(collection(db, 'boss_submissions'), (snapshot) => {
+          setBossSubmissions(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as WeeklyBossSubmission)));
+        }, safeErr('boss_submissions')),
 
-    const unsubscribeTestQuestions = onSnapshot(collection(db, 'test_questions'), (snapshot) => {
-      setTestQuestions(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as TestQuestion)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'test_questions'));
+        onSnapshot(collection(db, 'minigame_leaderboard'), (snapshot) => {
+          setLeaderboard(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as MinigameLeaderboard)));
+        }, safeErr('minigame_leaderboard')),
 
-    const unsubscribeLinks = onSnapshot(collection(db, 'external_links'), (snapshot) => {
-      setExternalLinks(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExternalLink)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'external_links'));
+        onSnapshot(collection(db, 'matchMaker_highscores'), (snapshot) => {
+          setTrioLeaderboard(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as MatchMakerHighscore)));
+        }, safeErr('matchMaker_highscores')),
 
-    const unsubscribeCourses = subscribeCourses((docs) => {
-      setCourseDocs(docs);
-    });
+        onSnapshot(collection(db, 'cli_leaderboard'), (snapshot) => {
+          setCliLeaderboard(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CliLeaderboard)));
+        }, safeErr('cli_leaderboard')),
+
+        onSnapshot(collection(db, 'test_questions'), (snapshot) => {
+          setTestQuestions(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as TestQuestion)));
+        }, safeErr('test_questions')),
+
+        onSnapshot(collection(db, 'external_links'), (snapshot) => {
+          setExternalLinks(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExternalLink)));
+        }, safeErr('external_links')),
+
+        subscribeCourses((docs) => {
+          setCourseDocs(docs);
+        })
+      );
+    }, 0);
 
     return () => {
-      unsubscribeCourses();
-      unsubscribeUsers();
-      unsubscribeObjectives();
-      unsubscribeBosses();
-      unsubscribeSubmissions();
-      unsubscribeLeaderboard();
-      unsubscribeTrioLeaderboard();
-      unsubscribeCliLeaderboard();
-      unsubscribeTestQuestions();
-      unsubscribeLinks();
+      cancelled = true;
+      clearTimeout(timer);
+      unsubs.forEach((unsub) => {
+        try { unsub(); } catch {}
+      });
     };
   }, []);
 
@@ -289,7 +304,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, initialCourse }
           { id: 'arcade', icon: Gamepad2, label: 'Arcade' },
           { id: 'links', icon: LinkIcon, label: 'Links' },
           { id: 'home-content', icon: HomeIcon, label: 'Home Content' },
-          { id: 'landing', icon: Globe, label: 'Landing' }
+          { id: 'landing', icon: Globe, label: 'Landing' },
+          { id: 'welcome-intro', icon: Sparkles, label: 'Welcome Intro' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -308,7 +324,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, initialCourse }
         ))}
       </div>
 
-      {activeTab !== 'objectives' && activeTab !== 'courses' && activeTab !== 'home-content' && activeTab !== 'landing' && (
+      {activeTab !== 'objectives' && activeTab !== 'courses' && activeTab !== 'home-content' && activeTab !== 'landing' && activeTab !== 'welcome-intro' && (
         <div className="relative mb-12">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={20} />
           <input 
@@ -438,6 +454,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, initialCourse }
 
         {activeTab === 'landing' && (
           <AdminLandingTab key="landing-tab" />
+        )}
+
+        {activeTab === 'welcome-intro' && (
+          <AdminWelcomeIntroTab
+            key="welcome-intro-tab"
+            setAdminFeedback={setAdminFeedback}
+          />
         )}
         </AnimatePresence>
 
